@@ -1,0 +1,13 @@
+version: "2.25"
+
+services:
+  warehouse-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: warehouse-manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/1-init.sql
+      - ./postgres-data:/var/lib/postgresql/data
