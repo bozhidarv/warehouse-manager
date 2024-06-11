@@ -5,51 +5,52 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/bozhidarv/warehouse-manager/warehouse-manager-api/internal/db"
 )
 
-func AddInventoryRouter(rg *gin.RouterGroup) {
-	inventoryRouter := rg.Group("/inventory")
-	inventoryRouter.GET("/", getInventorys)
-	inventoryRouter.GET("/:id", getInventory)
-	inventoryRouter.POST("/", createInventory)
-	inventoryRouter.PUT("/:id", updateInventory)
-	inventoryRouter.DELETE("/:id", deleteInventory)
+func AddCompanyRouter(rg *gin.RouterGroup) {
+	companyRouter := rg.Group("/companies")
+	companyRouter.GET("/", getCompanies)
+	companyRouter.GET("/:id", getCompany)
+	companyRouter.POST("/", createCompany)
+	companyRouter.PUT("/:id", updateCompany)
+	companyRouter.DELETE("/:id", deleteCompany)
 }
 
-func getInventorys(c *gin.Context) {
+func getCompanies(c *gin.Context) {
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	inventorys, err := dbConn.GetAllInventory(c.Request.Context())
+	companies, err := dbConn.GetAllCompanies(c.Request.Context())
 	if err != nil {
 		c.Status(500)
 		return
 	}
 
-	if inventorys == nil {
-		inventorys = []db.Inventory{}
+	if companies == nil {
+		companies = []db.Company{}
 	}
-	c.JSON(200, inventorys)
+	c.JSON(200, companies)
 }
 
-func getInventory(c *gin.Context) {
+func getCompany(c *gin.Context) {
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	inventory, err := dbConn.GetInventoryByMaterialId(c.Request.Context(), []byte(c.Param("id")))
+	company, err := dbConn.GetCompanyById(c.Request.Context(), []byte(c.Param("id")))
 	if err != nil {
 		c.Status(500)
 		return
 	}
 
-	c.JSON(200, inventory)
+	c.JSON(200, company)
 }
 
-func createInventory(c *gin.Context) {
+func createCompany(c *gin.Context) {
 	body := c.Request.Body
 	defer body.Close()
 	bodyStr, err := io.ReadAll(body)
@@ -57,8 +58,8 @@ func createInventory(c *gin.Context) {
 		c.Status(500)
 	}
 
-	inventoryBody := db.CreateInventoryParams{}
-	err = json.Unmarshal(bodyStr, &inventoryBody)
+	companyBody := db.CreateCompanyParams{}
+	err = json.Unmarshal(bodyStr, &companyBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -67,15 +68,16 @@ func createInventory(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 
 	dbConn := db.New(conn)
-	err = dbConn.CreateInventory(c.Request.Context(), inventoryBody)
+	err = dbConn.CreateCompany(c.Request.Context(), companyBody)
 	if err != nil {
 		c.Status(500)
 	}
+	companyBody.ID = []byte(uuid.New().String())
 
 	c.Status(201)
 }
 
-func updateInventory(c *gin.Context) {
+func updateCompany(c *gin.Context) {
 	body := c.Request.Body
 	defer body.Close()
 	bodyStr, err := io.ReadAll(body)
@@ -83,8 +85,8 @@ func updateInventory(c *gin.Context) {
 		c.Status(500)
 	}
 
-	inventoryBody := db.UpdateInventoryParams{}
-	err = json.Unmarshal(bodyStr, &inventoryBody)
+	companyBody := db.UpdateCompanyParams{}
+	err = json.Unmarshal(bodyStr, &companyBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -93,7 +95,7 @@ func updateInventory(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 
 	dbConn := db.New(conn)
-	err = dbConn.UpdateInventory(c.Request.Context(), inventoryBody)
+	err = dbConn.UpdateCompany(c.Request.Context(), companyBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -101,12 +103,12 @@ func updateInventory(c *gin.Context) {
 	c.Status(201)
 }
 
-func deleteInventory(c *gin.Context) {
+func deleteCompany(c *gin.Context) {
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	err := dbConn.DeleteInventory(c.Request.Context(), []byte(c.Param("id")))
+	err := dbConn.DeleteCompany(c.Request.Context(), []byte(c.Param("id")))
 	if err != nil {
 		c.Status(500)
 		return

@@ -13,25 +13,21 @@ import (
 
 const createCompany = `-- name: CreateCompany :exec
 INSERT INTO companies (id, created_on, modified_on, vat, name, address, phone)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+VALUES ($1, NOW(), NOW(), $2, $3, $4, $5)
 `
 
 type CreateCompanyParams struct {
-	ID         []byte
-	CreatedOn  pgtype.Date
-	ModifiedOn pgtype.Date
-	Vat        pgtype.Text
-	Name       pgtype.Text
-	Address    pgtype.Text
-	Phone      pgtype.Int8
+	ID      []byte
+	Vat     pgtype.Text
+	Name    pgtype.Text
+	Address pgtype.Text
+	Phone   pgtype.Int8
 }
 
 // Create a new company
 func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) error {
 	_, err := q.db.Exec(ctx, createCompany,
 		arg.ID,
-		arg.CreatedOn,
-		arg.ModifiedOn,
 		arg.Vat,
 		arg.Name,
 		arg.Address,
@@ -42,18 +38,17 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) er
 
 const createInventory = `-- name: CreateInventory :exec
 INSERT INTO inventory (material_id, quantity, date_last_modified)
-VALUES ($1, $2, $3)
+VALUES ($1, $2, NOW())
 `
 
 type CreateInventoryParams struct {
-	MaterialID       []byte
-	Quantity         pgtype.Int4
-	DateLastModified pgtype.Date
+	MaterialID []byte
+	Quantity   pgtype.Int4
 }
 
 // Create a new inventory entry
 func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams) error {
-	_, err := q.db.Exec(ctx, createInventory, arg.MaterialID, arg.Quantity, arg.DateLastModified)
+	_, err := q.db.Exec(ctx, createInventory, arg.MaterialID, arg.Quantity)
 	return err
 }
 
@@ -143,31 +138,27 @@ func (q *Queries) CreateSupplier(ctx context.Context, arg CreateSupplierParams) 
 
 const createTransactionHistory = `-- name: CreateTransactionHistory :exec
 INSERT INTO transaction_history (id, date, details, type, price, document_path, destination, material_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, NOW(), $2, $3, $4, $5, $6, $6)
 `
 
 type CreateTransactionHistoryParams struct {
 	ID           []byte
-	Date         pgtype.Date
 	Details      pgtype.Text
 	Type         pgtype.Text
 	Price        pgtype.Numeric
 	DocumentPath pgtype.Text
 	Destination  pgtype.Text
-	MaterialID   []byte
 }
 
 // Create a new transaction history entry
 func (q *Queries) CreateTransactionHistory(ctx context.Context, arg CreateTransactionHistoryParams) error {
 	_, err := q.db.Exec(ctx, createTransactionHistory,
 		arg.ID,
-		arg.Date,
 		arg.Details,
 		arg.Type,
 		arg.Price,
 		arg.DocumentPath,
 		arg.Destination,
-		arg.MaterialID,
 	)
 	return err
 }
@@ -190,13 +181,11 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) error {
 
 const createUser = `-- name: CreateUser :exec
 INSERT INTO users (email, created_on, modified_on, password_hash, username, company_id)
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, NOW(), NOW(), $2, $3, $4)
 `
 
 type CreateUserParams struct {
 	Email        string
-	CreatedOn    pgtype.Date
-	ModifiedOn   pgtype.Date
 	PasswordHash []byte
 	Username     pgtype.Text
 	CompanyID    []byte
@@ -206,8 +195,6 @@ type CreateUserParams struct {
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	_, err := q.db.Exec(ctx, createUser,
 		arg.Email,
-		arg.CreatedOn,
-		arg.ModifiedOn,
 		arg.PasswordHash,
 		arg.Username,
 		arg.CompanyID,
@@ -659,6 +646,34 @@ func (q *Queries) GetRecipeMaterialsById(ctx context.Context, arg GetRecipeMater
 	return i, err
 }
 
+const getRecipesByMaterial = `-- name: GetRecipesByMaterial :many
+SELECT r.id, r.product_name, r.description
+FROM recipes r
+JOIN recipe_materials rm ON r.id = rm.recipe_id
+WHERE rm.material_id = $1
+`
+
+// Get all recipes with a certain material
+func (q *Queries) GetRecipesByMaterial(ctx context.Context, materialID []byte) ([]Recipe, error) {
+	rows, err := q.db.Query(ctx, getRecipesByMaterial, materialID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Recipe
+	for rows.Next() {
+		var i Recipe
+		if err := rows.Scan(&i.ID, &i.ProductName, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSupplierById = `-- name: GetSupplierById :one
 SELECT id, name, email, phone FROM suppliers WHERE id = $1
 `
@@ -730,49 +745,44 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 
 const updateCompany = `-- name: UpdateCompany :exec
 UPDATE companies
-SET created_on = $2, modified_on = $3, vat = $4, name = $5, address = $6, phone = $7
-WHERE id = $1
+SET modified_on = NOW(), vat = $1, name = $2, address = $3, phone = $4
+WHERE id = $5
 `
 
 type UpdateCompanyParams struct {
-	ID         []byte
-	CreatedOn  pgtype.Date
-	ModifiedOn pgtype.Date
-	Vat        pgtype.Text
-	Name       pgtype.Text
-	Address    pgtype.Text
-	Phone      pgtype.Int8
+	Vat     pgtype.Text
+	Name    pgtype.Text
+	Address pgtype.Text
+	Phone   pgtype.Int8
+	ID      []byte
 }
 
 // Update an existing company
 func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) error {
 	_, err := q.db.Exec(ctx, updateCompany,
-		arg.ID,
-		arg.CreatedOn,
-		arg.ModifiedOn,
 		arg.Vat,
 		arg.Name,
 		arg.Address,
 		arg.Phone,
+		arg.ID,
 	)
 	return err
 }
 
 const updateInventory = `-- name: UpdateInventory :exec
 UPDATE inventory
-SET quantity = $2, date_last_modified = $3
+SET quantity = $2, date_last_modified = NOW()
 WHERE material_id = $1
 `
 
 type UpdateInventoryParams struct {
-	MaterialID       []byte
-	Quantity         pgtype.Int4
-	DateLastModified pgtype.Date
+	MaterialID []byte
+	Quantity   pgtype.Int4
 }
 
 // Update an existing inventory entry
 func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams) error {
-	_, err := q.db.Exec(ctx, updateInventory, arg.MaterialID, arg.Quantity, arg.DateLastModified)
+	_, err := q.db.Exec(ctx, updateInventory, arg.MaterialID, arg.Quantity)
 	return err
 }
 
@@ -883,14 +893,12 @@ func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) error {
 
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
-SET created_on = $2, modified_on = $3, password_hash = $4, username = $5, company_id = $6
+SET modified_on = NOW(), password_hash = $2, username = $3, company_id = $4
 WHERE email = $1
 `
 
 type UpdateUserParams struct {
 	Email        string
-	CreatedOn    pgtype.Date
-	ModifiedOn   pgtype.Date
 	PasswordHash []byte
 	Username     pgtype.Text
 	CompanyID    []byte
@@ -900,39 +908,9 @@ type UpdateUserParams struct {
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	_, err := q.db.Exec(ctx, updateUser,
 		arg.Email,
-		arg.CreatedOn,
-		arg.ModifiedOn,
 		arg.PasswordHash,
 		arg.Username,
 		arg.CompanyID,
 	)
 	return err
-}
-
-const getRecipesByMaterial = `-- name: getRecipesByMaterial :many
-SELECT r.id, r.product_name, r.description
-FROM recipes r
-JOIN recipe_materials rm ON r.id = rm.recipe_id
-WHERE rm.material_id = $1
-`
-
-// Get all recipes with a certain material
-func (q *Queries) getRecipesByMaterial(ctx context.Context, materialID []byte) ([]Recipe, error) {
-	rows, err := q.db.Query(ctx, getRecipesByMaterial, materialID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Recipe
-	for rows.Next() {
-		var i Recipe
-		if err := rows.Scan(&i.ID, &i.ProductName, &i.Description); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

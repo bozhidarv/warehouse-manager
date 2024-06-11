@@ -5,17 +5,20 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/bozhidarv/warehouse-manager/warehouse-manager-api/internal/db"
 )
 
 func AddRecipeRouter(rg *gin.RouterGroup) {
 	recipeRouter := rg.Group("/recipe")
+	recipeRouter.Use(authMiddleware)
 	recipeRouter.GET("/", getRecipes)
 	recipeRouter.GET("/:id", getRecipe)
 	recipeRouter.POST("/", createRecipe)
 	recipeRouter.PUT("/:id", updateRecipe)
 	recipeRouter.DELETE("/:id", deleteRecipe)
+	recipeRouter.GET("/material/:materialId", getAllRecipesByMaterialId)
 }
 
 func getRecipes(c *gin.Context) {
@@ -23,16 +26,16 @@ func getRecipes(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	units, err := dbConn.GetAllRecipes(c.Request.Context())
+	recipes, err := dbConn.GetAllRecipes(c.Request.Context())
 	if err != nil {
 		c.Status(500)
 		return
 	}
 
-	if units == nil {
-		units = []db.Recipe{}
+	if recipes == nil {
+		recipes = []db.Recipe{}
 	}
-	c.JSON(200, units)
+	c.JSON(200, recipes)
 }
 
 func getRecipe(c *gin.Context) {
@@ -40,13 +43,13 @@ func getRecipe(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	unit, err := dbConn.GetRecipeById(c.Request.Context(), []byte(c.Param("id")))
+	recipe, err := dbConn.GetRecipeById(c.Request.Context(), []byte(c.Param("id")))
 	if err != nil {
 		c.Status(500)
 		return
 	}
 
-	c.JSON(200, unit)
+	c.JSON(200, recipe)
 }
 
 func createRecipe(c *gin.Context) {
@@ -57,8 +60,8 @@ func createRecipe(c *gin.Context) {
 		c.Status(500)
 	}
 
-	unitBody := db.CreateRecipeParams{}
-	err = json.Unmarshal(bodyStr, &unitBody)
+	recipeBody := db.CreateRecipeParams{}
+	err = json.Unmarshal(bodyStr, &recipeBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -67,7 +70,7 @@ func createRecipe(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 
 	dbConn := db.New(conn)
-	err = dbConn.CreateRecipe(c.Request.Context(), unitBody)
+	err = dbConn.CreateRecipe(c.Request.Context(), recipeBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -83,17 +86,18 @@ func updateRecipe(c *gin.Context) {
 		c.Status(500)
 	}
 
-	unitBody := db.UpdateRecipeParams{}
-	err = json.Unmarshal(bodyStr, &unitBody)
+	recipeBody := db.UpdateRecipeParams{}
+	err = json.Unmarshal(bodyStr, &recipeBody)
 	if err != nil {
 		c.Status(500)
 	}
+	recipeBody.ID = []byte(uuid.New().String())
 
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())
 
 	dbConn := db.New(conn)
-	err = dbConn.UpdateRecipe(c.Request.Context(), unitBody)
+	err = dbConn.UpdateRecipe(c.Request.Context(), recipeBody)
 	if err != nil {
 		c.Status(500)
 	}
@@ -113,4 +117,21 @@ func deleteRecipe(c *gin.Context) {
 	}
 
 	c.Status(200)
+}
+
+func getAllRecipesByMaterialId(c *gin.Context) {
+	conn := connectToDB(c)
+	defer conn.Close(c.Request.Context())
+	dbConn := db.New(conn)
+
+	recipes, err := dbConn.GetRecipesByMaterial(c.Request.Context(), []byte(c.Param("materialId")))
+	if err != nil {
+		c.Status(500)
+		return
+	}
+
+	if recipes == nil {
+		recipes = []db.Recipe{}
+	}
+	c.JSON(200, recipes)
 }

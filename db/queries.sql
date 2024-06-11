@@ -111,12 +111,12 @@ SELECT * FROM inventory WHERE material_id = $1;
 -- Create a new inventory entry
 -- name: CreateInventory :exec
 INSERT INTO inventory (material_id, quantity, date_last_modified)
-VALUES ($1, $2, $3);
+VALUES ($1, $2, NOW());
 
 -- Update an existing inventory entry
 -- name: UpdateInventory :exec
 UPDATE inventory
-SET quantity = $2, date_last_modified = $3
+SET quantity = $2, date_last_modified = NOW()
 WHERE material_id = $1;
 
 -- Delete an inventory entry
@@ -136,7 +136,7 @@ SELECT * FROM transaction_history WHERE id = $1;
 -- Create a new transaction history entry
 -- name: CreateTransactionHistory :exec
 INSERT INTO transaction_history (id, date, details, type, price, document_path, destination, material_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+VALUES ($1, NOW(), $2, $3, $4, $5, $6, $6);
 
 
 -- Companies CRUD Operations
@@ -152,13 +152,13 @@ SELECT * FROM companies WHERE id = $1;
 -- Create a new company
 -- name: CreateCompany :exec
 INSERT INTO companies (id, created_on, modified_on, vat, name, address, phone)
-VALUES ($1, $2, $3, $4, $5, $6, $7);
+VALUES ($1, NOW(), NOW(), $2, $3, $4, $5);
 
 -- Update an existing company
 -- name: UpdateCompany :exec
 UPDATE companies
-SET created_on = $2, modified_on = $3, vat = $4, name = $5, address = $6, phone = $7
-WHERE id = $1;
+SET modified_on = NOW(), vat = $1, name = $2, address = $3, phone = $4
+WHERE id = $5;
 
 -- Delete a company
 -- name: DeleteCompany :exec
@@ -177,12 +177,12 @@ SELECT * FROM users WHERE email = $1;
 -- Create a new user
 -- name: CreateUser :exec
 INSERT INTO users (email, created_on, modified_on, password_hash, username, company_id)
-VALUES ($1, $2, $3, $4, $5, $6);
+VALUES ($1, NOW(), NOW(), $2, $3, $4);
 
 -- Update an existing user
 -- name: UpdateUser :exec
 UPDATE users
-SET created_on = $2, modified_on = $3, password_hash = $4, username = $5, company_id = $6
+SET modified_on = NOW(), password_hash = $2, username = $3, company_id = $4
 WHERE email = $1;
 
 -- Delete a user
@@ -215,7 +215,7 @@ WHERE recipe_id = $1 AND material_id = $2;
 DELETE FROM recipe_materials WHERE recipe_id = $1 AND material_id = $2;
 
 -- Get all recipes with a certain material
--- name: getRecipesByMaterial :many
+-- name: GetRecipesByMaterial :many
 SELECT r.id, r.product_name, r.description
 FROM recipes r
 JOIN recipe_materials rm ON r.id = rm.recipe_id

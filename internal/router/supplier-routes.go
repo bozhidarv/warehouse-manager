@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/bozhidarv/warehouse-manager/warehouse-manager-api/internal/db"
 )
@@ -62,6 +63,7 @@ func createSupplier(c *gin.Context) {
 	if err != nil {
 		c.Status(500)
 	}
+	supplierBody.ID = []byte(uuid.New().String())
 
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())

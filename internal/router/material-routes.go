@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/bozhidarv/warehouse-manager/warehouse-manager-api/internal/db"
 )
@@ -18,6 +19,11 @@ func AddMaterialRouter(rg *gin.RouterGroup) {
 	materrialRouter.DELETE("/:id", deleteMaterial)
 }
 
+// @Summary get all materials
+// @Accept json
+// @Produce json
+// @Success 200 {string} Helloworld
+// @Router /materials [get]
 func getMaterials(c *gin.Context) {
 	conn := connectToDB(c)
 	defer conn.Close(c.Request.Context())
@@ -71,6 +77,7 @@ func createMaterial(c *gin.Context) {
 	if err != nil {
 		c.Status(500)
 	}
+	materialBody.ID = []byte(uuid.New().String())
 
 	c.Status(201)
 }
@@ -113,4 +120,21 @@ func deleteMaterial(c *gin.Context) {
 	}
 
 	c.Status(200)
+}
+
+func getRecipiesByMaterialId(c *gin.Context) {
+	conn := connectToDB(c)
+	defer conn.Close(c.Request.Context())
+	dbConn := db.New(conn)
+
+	recipies, err := dbConn.GetRecipeById(c.Request.Context(), []byte(c.Param("id")))
+	if err != nil {
+		c.Status(500)
+		return
+	}
+
+	if recipies == nil {
+		recipies = []db.Recipe{}
+	}
+	c.JSON(200, recipies)
 }

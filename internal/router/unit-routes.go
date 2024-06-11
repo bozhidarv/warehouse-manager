@@ -5,17 +5,18 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/bozhidarv/warehouse-manager/warehouse-manager-api/internal/db"
 )
 
 func AddUnitRouter(rg *gin.RouterGroup) {
-	supplierRouter := rg.Group("/units")
-	supplierRouter.GET("/", getUnits)
-	supplierRouter.GET("/:id", getUnit)
-	supplierRouter.POST("/", createUnit)
-	supplierRouter.PUT("/:id", updateUnit)
-	supplierRouter.DELETE("/:id", deleteUnit)
+	unitRouter := rg.Group("/units")
+	unitRouter.GET("/", getUnits)
+	unitRouter.GET("/:id", getUnit)
+	unitRouter.POST("/", createUnit)
+	unitRouter.PUT("/:id", updateUnit)
+	unitRouter.DELETE("/:id", deleteUnit)
 }
 
 func getUnits(c *gin.Context) {
@@ -71,6 +72,7 @@ func createUnit(c *gin.Context) {
 	if err != nil {
 		c.Status(500)
 	}
+	unitBody.ID = []byte(uuid.New().String())
 
 	c.Status(201)
 }
