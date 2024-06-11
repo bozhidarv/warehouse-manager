@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS transaction_history (
     id BYTEA PRIMARY KEY,
     date DATE,
     details VARCHAR(255),
-    type VARCHAR(50),
+    type VARCHAR(50)  CHECK (type IN ('in', 'out')),
     price NUMERIC(10, 2),
     document_path VARCHAR(255),
     destination VARCHAR(255),

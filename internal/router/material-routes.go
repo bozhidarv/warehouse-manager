@@ -127,7 +127,7 @@ func getRecipiesByMaterialId(c *gin.Context) {
 	defer conn.Close(c.Request.Context())
 	dbConn := db.New(conn)
 
-	recipies, err := dbConn.GetRecipeById(c.Request.Context(), []byte(c.Param("id")))
+	recipies, err := dbConn.GetRecipesByMaterial(c.Request.Context(), []byte(c.Param("id")))
 	if err != nil {
 		c.Status(500)
 		return

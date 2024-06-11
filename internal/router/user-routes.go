@@ -130,7 +130,7 @@ func login(c *gin.Context) {
 		return
 	}
 
-	token := createJwtToken(&dbUser.Email)
+	token := createJwtToken(dbUser.Email)
 
 	c.Header("Authorization", fmt.Sprintf("Bearer %s", token))
 	c.Status(200)
@@ -164,7 +164,7 @@ func register(c *gin.Context) {
 		c.Status(500)
 	}
 
-	token := createJwtToken(&userBody.Email)
+	token := createJwtToken(userBody.Email)
 
 	c.Header("Authorization", fmt.Sprintf("Bearer %s", token))
 	c.Status(201)
